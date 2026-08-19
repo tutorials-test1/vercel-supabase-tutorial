@@ -1,5 +1,9 @@
 import { supabase } from '@/lib/supabase'
 
+// 공지사항은 매 요청마다 Supabase에서 최신 데이터를 읽어옵니다.
+// 이 줄이 없으면 빌드 시점 데이터가 굳어, 새 공지를 넣어도 재배포 전까지 안 보입니다.
+export const dynamic = 'force-dynamic'
+
 export default async function Home() {
   const teamName = process.env.NEXT_PUBLIC_TEAM_NAME
   const isSet = Boolean(teamName)
@@ -8,9 +12,9 @@ export default async function Home() {
   const hasSupabaseEnv = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   )
-  const { data: notices } = hasSupabaseEnv
+  const { data: notices, error: noticesError } = hasSupabaseEnv
     ? await supabase.from('notices').select('*').order('created_at', { ascending: false })
-    : { data: null }
+    : { data: null, error: null }
 
   return (
     <main
@@ -83,6 +87,10 @@ export default async function Home() {
         {!hasSupabaseEnv ? (
           <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 12, textAlign: 'left' }}>
             아직 Supabase 연결 전입니다. 환경변수를 넣고 재배포하면 여기에 데이터가 표시됩니다.
+          </p>
+        ) : noticesError ? (
+          <p style={{ color: '#b91c1c', fontSize: 13, marginTop: 12, textAlign: 'left' }}>
+            공지사항을 불러오지 못했습니다 — {noticesError.message}
           </p>
         ) : notices?.length ? (
           <ul style={{ listStyle: 'none', padding: 0, margin: '12px 0 0', textAlign: 'left' }}>
